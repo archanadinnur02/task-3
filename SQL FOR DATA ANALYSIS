@@ -1,0 +1,128 @@
+-- a. Use SELECT, WHERE, ORDER BY, GROUP BY
+
+-- 1. Select all customers from 'New York'
+SELECT *
+FROM Customers
+WHERE city = 'New York';
+
+-- 2. List products with a price greater than 50, ordered by price in descending order
+SELECT product_name, category, price
+FROM Products
+WHERE price > 50
+ORDER BY price DESC;
+
+-- 3. Count the number of orders per customer
+SELECT customer_id, COUNT(order_id) AS total_orders
+FROM Orders
+GROUP BY customer_id
+ORDER BY total_orders DESC;
+
+-- 4. Find the average total amount of orders placed in 2024
+SELECT AVG(total_amount) AS average_order_amount_2024
+FROM Orders
+WHERE strftime('%Y', order_date) = '2024'; -- For SQLite, use YEAR(order_date) for MySQL, EXTRACT(YEAR FROM order_date) for PostgreSQL
+
+-- b. Use JOINS (INNER, LEFT, RIGHT)
+
+-- 5. Get all orders along with customer names (INNER JOIN)
+SELECT o.order_id, c.customer_name, o.order_date, o.total_amount
+FROM Orders o
+INNER JOIN Customers c ON o.customer_id = c.customer_id;
+
+-- 6. List all products and their associated order items (LEFT JOIN to see products even if not ordered)
+SELECT p.product_name, p.category, oi.quantity, oi.price_per_unit
+FROM Products p
+LEFT JOIN Order_Items oi ON p.product_id = oi.product_id;
+
+-- 7. Find customers who have not placed any orders (LEFT JOIN with WHERE IS NULL)
+SELECT c.customer_name, c.email
+FROM Customers c
+LEFT JOIN Orders o ON c.customer_id = o.customer_id
+WHERE o.order_id IS NULL;
+
+-- c. Write subqueries
+
+-- 8. Find products that have been ordered at least once
+SELECT product_name
+FROM Products
+WHERE product_id IN (SELECT DISTINCT product_id FROM Order_Items);
+
+-- 9. Get the names of customers who placed orders with a total amount greater than the average order amount
+SELECT customer_name
+FROM Customers
+WHERE customer_id IN (
+    SELECT customer_id
+    FROM Orders
+    WHERE total_amount > (SELECT AVG(total_amount) FROM Orders)
+);
+
+-- d. Use aggregate functions (SUM, AVG, MIN, MAX, COUNT)
+
+-- 10. Calculate the total revenue generated from all orders
+SELECT SUM(total_amount) AS total_revenue
+FROM Orders;
+
+-- 11. Find the average price of products in each category
+SELECT category, AVG(price) AS average_price
+FROM Products
+GROUP BY category;
+
+-- 12. Determine the total quantity of each product sold
+SELECT p.product_name, SUM(oi.quantity) AS total_quantity_sold
+FROM Products p
+INNER JOIN Order_Items oi ON p.product_id = oi.product_id
+GROUP BY p.product_name
+ORDER BY total_quantity_sold DESC;
+
+-- e. Create views for analysis
+
+-- 13. Create a view for customer order summaries
+CREATE VIEW CustomerOrderSummary AS
+SELECT
+    c.customer_id,
+    c.customer_name,
+    COUNT(o.order_id) AS number_of_orders,
+    SUM(o.total_amount) AS total_spent
+FROM
+    Customers c
+LEFT JOIN
+    Orders o ON c.customer_id = o.customer_id
+GROUP BY
+    c.customer_id, c.customer_name;
+
+-- Query the view
+SELECT * FROM CustomerOrderSummary WHERE total_spent > 1000;
+
+-- 14. Create a view for product sales details
+CREATE VIEW ProductSalesDetails AS
+SELECT
+    p.product_id,
+    p.product_name,
+    p.category,
+    SUM(oi.quantity) AS total_units_sold,
+    SUM(oi.quantity * oi.price_per_unit) AS total_product_revenue
+FROM
+    Products p
+INNER JOIN
+    Order_Items oi ON p.product_id = oi.product_id
+GROUP BY
+    p.product_id, p.product_name, p.category
+ORDER BY
+    total_product_revenue DESC;
+
+-- Query the view
+SELECT * FROM ProductSalesDetails WHERE category = 'Electronics';
+
+-- f. Optimize queries with indexes
+
+-- 15. Create an index on the customer_id in the Orders table for faster joins
+CREATE INDEX idx_orders_customer_id ON Orders (customer_id);
+
+-- 16. Create an index on the product_id in the Order_Items table for faster joins and lookups
+CREATE INDEX idx_order_items_product_id ON Order_Items (product_id);
+
+-- 17. Create an index on the order_date in the Orders table for queries involving date ranges
+CREATE INDEX idx_orders_order_date ON Orders (order_date);
+
+-- 18. Create an index on the email in the Customers table for faster customer lookups by email
+CREATE INDEX idx_customers_email ON Customers (email);
