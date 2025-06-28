@@ -126,3 +126,5 @@ CREATE INDEX idx_orders_order_date ON Orders (order_date);
 
 -- 18. Create an index on the email in the Customers table for faster customer lookups by email
 CREATE INDEX idx_customers_email ON Customers (email);
+
+
